@@ -2,7 +2,7 @@
 
 ## Installation
 ```
-pip install --editable WebPageClone/
+pip install git+https://github.com/ariestahrt/WebPageClone.git
 ```
 
 ## Usage
