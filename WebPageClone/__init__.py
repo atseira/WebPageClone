@@ -96,11 +96,10 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list, th
     with lock:
         old_content = read_file(f"{saved_path}/{asset['source']['file']}")
     
-    replacement = asset["saved_to"]
-    if asset["source"]["file"].count("/") > 0: replacement = asset["saved_to"][len("assets/"):]
-    new_content = old_content.replace(asset["source"]["replace"], asset["source"]["replace"].replace(asset["path"], replacement))
-    
-    with lock:
+        replacement = asset["saved_to"]
+        if asset["source"]["file"].count("/") > 0: replacement = asset["saved_to"][len("assets/"):]
+        new_content = old_content.replace(asset["source"]["replace"], asset["source"]["replace"].replace(asset["path"], replacement))
+        
         with open(normalize_path(f"{saved_path}/{asset['source']['file']}"), "w") as f: f.write(new_content)
 
     logging.info(">> Downloading asset {}", asset["url"])
@@ -138,6 +137,8 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list, th
                     css_asset_list.append({"path":css_localcontent_url, "source":{"file":asset["saved_to"],"replace":css_url}})
 
             for i in range(len(css_asset_list)):
+                if i >= len(css_asset_list): break
+
                 css_asset = css_asset_list[i]
 
                 if "status_code" in css_asset.keys(): continue
@@ -234,7 +235,8 @@ def save_webpage(url, html_content="", saved_path="result"):
             css_localcontent_url = clean_path(css_localcontent_url)
             assets_list.append({"path":css_localcontent_url, "source":{"file":normalize_path("index.html"),"replace":css_url}})
 
-    for i in range (len(assets_list)):
+    for i in range(len(assets_list)):
+        if i >= len(assets_list): break
         asset = assets_list[i]
         if "status_code" in asset.keys(): continue
         # Converting assets to full url
