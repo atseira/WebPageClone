@@ -77,6 +77,10 @@ def get_file_name(spath):
         if forbiden_char in file_type:
             file_type = "file"
             break
+    
+    for forbiden_char in "\ / : * ? \" ' < > |".split(" "):
+        if forbiden_char in file_name:
+            file_name = file_name.replace(forbiden_char, "_")
 
     return file_name, file_type
 
