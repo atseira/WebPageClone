@@ -88,20 +88,18 @@ def get_file_name(spath):
 
     return file_name, file_type
 
-def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
+def download_local_asset(saved_path, base_url, file_path, asset, assets_list, thread_id):
     # Calculate saved asset name
-    asset["saved_to"] = normalize_path(f"assets/{asset['name']}.{asset['type']}")
-    
-    uniq = 0
-    while os.path.exists(f"{saved_path}/{asset['saved_to']}"):
-        asset["saved_to"] = normalize_path(f"assets/{asset['name']}-{uniq}.{asset['type']}")
-        uniq+=1
+    asset["saved_to"] = normalize_path(f"assets/{asset['name']}-{thread_id}.{asset['type']}")
 
     # Fix path from current edited file_src
-    old_content = read_file(f"{saved_path}/{asset['source']['file']}")
+    with lock:
+        old_content = read_file(f"{saved_path}/{asset['source']['file']}")
+    
     replacement = asset["saved_to"]
     if asset["source"]["file"].count("/") > 0: replacement = asset["saved_to"][len("assets/"):]
     new_content = old_content.replace(asset["source"]["replace"], asset["source"]["replace"].replace(asset["path"], replacement))
+    
     with lock:
         with open(normalize_path(f"{saved_path}/{asset['source']['file']}"), "w") as f: f.write(new_content)
 
@@ -139,7 +137,9 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
                     css_localcontent_url = clean_path(css_localcontent_url)
                     css_asset_list.append({"path":css_localcontent_url, "source":{"file":asset["saved_to"],"replace":css_url}})
 
-            for css_asset in css_asset_list:
+            for i in range(len(css_asset_list)):
+                css_asset = css_asset_list[i]
+
                 if "status_code" in css_asset.keys(): continue
                 # Converting assets to full url
 
@@ -160,7 +160,7 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
                 css_asset["name"], css_asset["type"] = get_file_name(asset_fullurl)                        
 
                 if validators.url(css_asset["url"]):
-                    t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, css_file_path, css_asset, assets_list))
+                    t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, css_file_path, css_asset, assets_list, f"{thread_id}{i}"))
                     threads.append(t)
                     t.start()
                 else:
@@ -234,7 +234,8 @@ def save_webpage(url, html_content="", saved_path="result"):
             css_localcontent_url = clean_path(css_localcontent_url)
             assets_list.append({"path":css_localcontent_url, "source":{"file":normalize_path("index.html"),"replace":css_url}})
 
-    for asset in assets_list:
+    for i in range (len(assets_list)):
+        asset = assets_list[i]
         if "status_code" in asset.keys(): continue
         # Converting assets to full url
         asset_fullurl = asset["path"]
@@ -252,7 +253,7 @@ def save_webpage(url, html_content="", saved_path="result"):
         asset["name"], asset["type"] = get_file_name(asset_fullurl)
 
         if validators.url(asset["url"]):
-            t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, file_path, asset, assets_list))
+            t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, file_path, asset, assets_list, f"{i}"))
             threads.append(t)
             t.start()
         else:
