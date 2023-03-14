@@ -8,6 +8,11 @@ import requests
 import os
 import validators
 import logging
+import threading
+
+lock = threading.Lock()
+threads = []
+
 disable_warnings(InsecureRequestWarning)
 
 def read_file(filename):
@@ -37,7 +42,6 @@ def create_dir(path):
         os.makedirs(path, exist_ok = True)
     except OSError as error:
         logging.error("Failed creating dir {}", path)
-
 
 def normalize_path(path):
     return path.replace("\\", "/")
@@ -98,7 +102,8 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
     replacement = asset["saved_to"]
     if asset["source"]["file"].count("/") > 0: replacement = asset["saved_to"][len("assets/"):]
     new_content = old_content.replace(asset["source"]["replace"], asset["source"]["replace"].replace(asset["path"], replacement))
-    with open(normalize_path(f"{saved_path}/{asset['source']['file']}"), "w") as f: f.write(new_content)
+    with lock:
+        with open(normalize_path(f"{saved_path}/{asset['source']['file']}"), "w") as f: f.write(new_content)
 
     logging.info(">> Downloading asset {}", asset["url"])
     req = get_content(asset["url"])
@@ -112,7 +117,8 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
         with open(normalize_path(f"{saved_path}/{asset['saved_to']}"), "wb") as f: f.write(req.content)
 
         # LOGS TO assets/assets_info.txt
-        with open(normalize_path(f"{saved_path}/assets/assets_info.txt"), "a") as f: f.write(f"{asset['saved_to']} => {asset['url']}\n")
+        with lock:
+            with open(normalize_path(f"{saved_path}/assets/assets_info.txt"), "a") as f: f.write(f"{asset['saved_to']} => {asset['url']}\n")
 
         # CHECK IF ASSET IS CSS AND HAS LOCAL URL
         if asset['type'] == "css":
@@ -154,18 +160,23 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list):
                 css_asset["name"], css_asset["type"] = get_file_name(asset_fullurl)                        
 
                 if validators.url(css_asset["url"]):
-                    download_local_asset(saved_path, base_url, css_file_path, css_asset, assets_list)
+                    t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, css_file_path, css_asset, assets_list))
+                    threads.append(t)
+                    t.start()
                 else:
                     css_asset_list.remove(css_asset)
 
                 assets_list.append(css_asset)
 
 def save_webpage(url, html_content="", saved_path="result"):
+    global threads
     logging.info("SAVING {}", url)
 
     remove_dir(saved_path)
     create_dir(saved_path)
     create_dir(normalize_path(saved_path+"/assets"))
+
+    threads = []
 
     parsed = urlparse(url)
     base_url = parsed.scheme + "://" + parsed.netloc + "/"
@@ -241,10 +252,16 @@ def save_webpage(url, html_content="", saved_path="result"):
         asset["name"], asset["type"] = get_file_name(asset_fullurl)
 
         if validators.url(asset["url"]):
-            download_local_asset(saved_path, base_url, file_path, asset, assets_list)
+            t = threading.Thread(target=download_local_asset, args=(saved_path, base_url, file_path, asset, assets_list))
+            threads.append(t)
+            t.start()
         else:
             assets_list.remove(asset)
     
+    # wait for all threads to finish
+    for t in threads:
+        t.join()
+
     import json
     with open(saved_path+"/assets.json", "w") as f:
         json.dump(assets_list, f, indent=4, sort_keys=True)
