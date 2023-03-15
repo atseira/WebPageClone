@@ -9,6 +9,8 @@ import os
 import validators
 import logging
 import threading
+import json
+
 
 lock = threading.Lock()
 threads = []
@@ -85,6 +87,9 @@ def get_file_name(spath):
     for forbiden_char in "\ / : * ? \" ' < > |".split(" "):
         if forbiden_char in file_name:
             file_name = file_name.replace(forbiden_char, "_")
+
+    if len(file_name) > 255:
+        file_name = "name_too_long"
 
     return file_name, file_type
 
@@ -265,9 +270,25 @@ def save_webpage(url, html_content="", saved_path="result"):
     for t in threads:
         t.join()
 
-    import json
+    # save assets.json
+    new_assets = []
+    for asset in assets_list:
+        if asset.get("url") != None and asset.get("saved_to") != None:
+            if os.path.exists(f"{saved_path}/{asset['saved_to']}") == False:
+                continue
+
+            new_assets.append({
+                "url": asset["url"],
+                "download_status_code": asset.get("status_code"),
+                "saved_to": asset.get("saved_to"),
+                "source": {
+                    "file": asset["source"]["file"],
+                    "url": asset["source"]["url"]
+                },
+            })
+
     with open(saved_path+"/assets.json", "w") as f:
-        json.dump(assets_list, f, indent=4, sort_keys=True)
+        json.dump(new_assets, f, indent=4, sort_keys=True)
 
     assets_ok = [x for x in assets_list if "status_code" in x.keys() and x['status_code'] == 200]
     if len(assets_list) == 0: return 1.0
