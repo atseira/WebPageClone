@@ -210,6 +210,11 @@ def save_webpage(url, html_content="", saved_path="result"):
             base_path = base_parse.path if base_parse.netloc else base_parse.path.lstrip('/')
             url = urljoin(currenturl_parse.scheme + '://' + currenturl_parse.netloc, base_path)
 
+        # remove base tag
+        base_tag.decompose()
+    
+        html_content = soup.prettify()
+
     parsed = urlparse(url)
     base_url = parsed.scheme + "://" + parsed.netloc + "/"
     file_path = os.path.normpath(parsed.path[:parsed.path.rfind("/")+1]).replace("\\", "/") + "/"
