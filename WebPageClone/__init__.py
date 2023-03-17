@@ -184,15 +184,36 @@ def save_webpage(url, html_content="", saved_path="result"):
 
     threads = []
 
-    parsed = urlparse(url)
-    base_url = parsed.scheme + "://" + parsed.netloc + "/"
-    file_path = os.path.normpath(parsed.path[:parsed.path.rfind("/")+1]).replace("\\", "/") + "/"
-    if len(file_path) > 0: file_path = file_path[1:]
-
     if html_content == "": html_content = get_content(url).text
 
     # Write HTML to original.html
     with open(normalize_path(saved_path+"/original.html"), "w", encoding='utf-8') as f: f.write(html_content)
+
+    # checking if html dom has <base>
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # check if <base> tag exists
+    base_tag = soup.find('base')
+    if base_tag is not None:
+        # get the 'href' attribute value
+        base_href = base_tag.get('href')
+
+        # check if the href value is a full URL or a partial URL
+        if bool(urlparse(base_href).netloc):
+            # if the href value is a full URL, use it directly as the absolute URL path
+            url = base_href
+        else:
+            # if the href value is a partial URL, construct the absolute URL path using urlparse and urljoin
+            currenturl_parse = urlparse(url)
+            base_parse = urlparse(base_href)
+
+            base_path = base_parse.path if base_parse.netloc else base_parse.path.lstrip('/')
+            url = urljoin(currenturl_parse.scheme + '://' + currenturl_parse.netloc, base_path)
+
+    parsed = urlparse(url)
+    base_url = parsed.scheme + "://" + parsed.netloc + "/"
+    file_path = os.path.normpath(parsed.path[:parsed.path.rfind("/")+1]).replace("\\", "/") + "/"
+    if len(file_path) > 0: file_path = file_path[1:]
 
     # Write HTML first
     with open(normalize_path(saved_path+"/index.html"), "w", encoding='utf-8') as f: f.write(html_content)
