@@ -65,7 +65,21 @@ def dont_slash(path):
 def get_content(url, max_retry=2):
     if max_retry == 0: return None
     try:
-        req = requests.get(url, timeout=5, allow_redirects=False, verify=False)
+        headers = {
+            'accept-language': 'en-US,en;q=0.9,id;q=0.8',
+            'cache-control': 'max-age=0',
+            'dnt': '1',
+            'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'none',
+            'sec-fetch-user': '?1',
+            'upgrade-insecure-requests': '1',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+        }
+        req = requests.get(url, headers=headers, timeout=5, allow_redirects=False, verify=False)
         return req
     except Exception as ex:
         logging.error("{} >> {}", url, ex)
