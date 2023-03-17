@@ -67,7 +67,8 @@ def get_content(url, max_retry=2):
     try:
         req = requests.get(url, timeout=5, allow_redirects=False, verify=False)
         return req
-    except:
+    except Exception as ex:
+        logging.error("{} >> {}", url, ex)
         get_content(url, max_retry-1)
     
     return None
@@ -110,7 +111,7 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list, th
     logging.info(">> Downloading asset {}", asset["url"])
     req = get_content(asset["url"])
     if req == None:
-        logging.error(">> Failed")
+        logging.error(f">> {asset['url']} Failed")
         return
 
     asset["status_code"] = req.status_code
