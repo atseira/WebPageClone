@@ -11,6 +11,8 @@ import logging
 import threading
 import json
 
+max_threads = 10
+thread_semaphore = threading.Semaphore(value=max_threads)
 
 lock = threading.Lock()
 threads = []
@@ -111,6 +113,7 @@ def get_file_name(spath):
     return file_name, file_type
 
 def download_local_asset(saved_path, base_url, file_path, asset, assets_list, thread_id):
+    thread_semaphore.acquire()
     # Calculate saved asset name
     asset["saved_to"] = normalize_path(f"assets/{asset['name']}-{thread_id}.{asset['type']}")
 
@@ -190,6 +193,8 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list, th
                     css_asset_list.remove(css_asset)
 
                 assets_list.append(css_asset)
+
+    thread_semaphore.release()
 
 def save_webpage(url, html_content="", saved_path="result"):
     global threads
