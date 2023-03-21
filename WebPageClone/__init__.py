@@ -131,6 +131,7 @@ def download_local_asset(saved_path, base_url, file_path, asset, assets_list, th
     req = get_content(asset["url"])
     if req == None:
         logging.error(f">> {asset['url']} Failed")
+        thread_semaphore.release()
         return
 
     asset["status_code"] = req.status_code
